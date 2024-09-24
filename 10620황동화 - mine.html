@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        h1 {
+            color: #333;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        #board {
+            border-collapse: separate;
+            border-spacing: 2px;
+            background: #bbb;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+
+        #board tr td {
+            border: 1px solid #999;
+            background: #34da79;
+            width: 30px;
+            height: 30px;
+            text-align: center;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        #board tr td:hover {
+            background: #2ab665;
+        }
+
+        #board tr td.clicked {
+            background: #6c5ee7;
+        }
+
+        #board tr td.mine {
+            background: #FF0000;
+        }
+
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+            transform: scale(1.05);
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        #addclick {
+            background-color: #28a745;
+        }
+
+        #addclick:hover {
+            background-color: #218838;
+        }
+
+        p {
+            font-size: 18px;
+            color: #333;
+        }
+
+        #skill,
+        #defend,
+        #time {
+            font-weight: bold;
+            color: #d35400;
+            margin-top: 10px;
+        }
+
+        #defend {
+            font-size: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1 id="title">스킬 지뢰찾기</h1>
+    <table id="board"></table>
+    <button onclick="genGrid();">새로운 게임</button><br/>
+    <button onclick="addclick();" id="addclick">0</button>
+    <p id="time"></p>
+    <p id="skill"></p>
+    <p id="defend"></p>
+    <script>
+        let defend = 0;
+        let grid = document.getElementById("board");
+        let remainingCells = 64;
+        let gameActive = true; // 게임 활성화 상태 추적
+        let skillUsed = false; // 스킬 사용 여부
+        let lastClickTime = 0; // 마지막 클릭 시간
+        const clickThreshold = 10; // 빠른 클릭 간격 (밀리초)
+        const clickBanDuration = 10000; // 클릭 금지 지속 시간 (밀리초)
+        genGrid();
+
+        function genGrid() {
+            defend = 0;
+            remainingCells = 64;
+            grid.innerHTML = "";
+            document.getElementById("skill").innerHTML = "";
+            document.getElementById("defend").innerHTML = "";
+            document.getElementById("addclick").innerHTML = "0";
+            gameActive = true; // 게임 시작
+            skillUsed = false; // 스킬 사용 초기화
+            for (let i = 0; i < 8; i++) {
+                row = grid.insertRow(i);
+                for (var j = 0; j < 8; j++) {
+                    cell = row.insertCell(j);
+                    cell.onclick = function () { clickBox(this); };
+                    var mine = document.createAttribute("mine");
+                    mine.value = Math.random() < 0.2 ? "true" : "false";
+                    cell.setAttributeNode(mine);
+                }
+            }
+        }
+
+        function clickBox(cell) {
+            
+            if (cell.getAttribute("mine") == "true") {
+                if (defend > 0) {
+                    document.getElementById("skill").innerHTML = "방어 성공!";
+                    defend--;
+                    updateDefenseDisplay();
+                } else {
+                    alert("지뢰를 밟았습니다! 게임 오버!");
+                    finish();
+                }
+            } else {
+                cell.className = "clicked";
+                remainingCells--;
+                if (remainingCells === 0) {
+                    alert("축하합니다! 모든 안전한 칸을 찾았습니다!");
+                    finish(true);
+                }
+            }
+        }
+
+        function finish(isWin = false) {
+            let rows = grid.rows;
+            for (let i = 0; i < rows.length; i++) {
+                let cells = rows[i].cells;
+                for (let j = 0; j < cells.length; j++) {
+                    if (cells[j].getAttribute("mine") === "true") {
+                        cells[j].className = isWin ? "clicked" : "mine";
+                    }
+                }
+            }
+            gameActive = false; // 게임 종료
+        }
+
+        function addclick() {
+            let currentTime = new Date().getTime();
+            if (cell.className === "clicked" || !gameActive) return; // 게임 종료 시 클릭 방지
+            //console.log(currentTime - lastClickTime );
+            if (currentTime - lastClickTime < clickThreshold) {
+                // 빠른 클릭 감지
+                alert("빠른 클릭을 감지했습니다! 10초 동안 클릭할 수 없습니다.");
+                disableClicking(true); // 클릭 비활성화
+                setTimeout(() => {
+                    disableClicking(false); // 클릭 활성화
+                }, clickBanDuration);
+                lastClickTime = 0; // 클릭 간격 초기화
+                return;
+            }
+            lastClickTime = currentTime; // 마지막 클릭 시간 업데이트
+            if (!gameActive) return; // 게임 종료 시 클릭 방지
+            
+            count = document.getElementById("addclick");
+            count.innerHTML = parseInt(count.innerHTML) + 1;
+            checkclick(count);
+        }
+
+        function checkclick(count) {
+            if (parseInt(count.innerHTML) >= 100) {
+                randomskill(Math.random());
+                count.innerHTML = "0";
+            }
+        }
+
+        function randomskill(randomNumber) {
+            disableButtons(true); // 스킬 사용 중 버튼 클릭 방지
+            skillUsed = true; // 스킬 사용 상태 변경
+            if (randomNumber < 0.33333) {
+                showMinesTemporarily();
+            } else if (randomNumber < 0.66666) {
+                addDefenseShield();
+            } else if (randomNumber < 0.99999) {
+                revealSafeCells();
+            }
+        }
+
+        function disableButtons(disable) {
+            const buttons = document.querySelectorAll("button");
+            buttons.forEach(button => {
+                button.disabled = disable; // 버튼 비활성화
+            });
+            setTimeout(() => {
+                disableButtons(false); // 3초 후 버튼 다시 활성화
+            }, 3000);
+        }
+
+        function disableClicking(disable) {
+            const cells = grid.getElementsByTagName("td");
+            for (let i = 0; i < cells.length; i++) {
+                cells[i].style.pointerEvents = disable ? "none" : "auto"; // 클릭 비활성화
+            }
+        }
+
+        function showMinesTemporarily() {
+            document.getElementById("skill").innerHTML = "1초동안 지뢰 보이기";
+            countdownAndExecute(function () {
+                let rows = grid.rows;
+                for (let i = 0; i < rows.length; i++) {
+                    let cells = rows[i].cells;
+                    for (let j = 0; j < cells.length; j++) {
+                        if (cells[j].getAttribute("mine") === "true") {
+                            cells[j].className = "mine";
+                        }
+                    }
+                }
+            }, function () {
+                let rows = grid.rows;
+                for (let i = 0; i < rows.length; i++) {
+                    let cells = rows[i].cells;
+                    for (let j = 0; j < cells.length; j++) {
+                        if (cells[j].getAttribute("mine") === "true" && cells[j].className !== "clicked") {
+                            cells[j].className = "";
+                        }
+                    }
+                }
+                document.getElementById("skill").innerHTML = "";
+                skillUsed = false; // 스킬 사용 종료
+                checkForSkillUsage(); // 스킬 사용 후 100 넘는지 확인
+            });
+        }
+
+        function addDefenseShield() {
+            defend++;
+            document.getElementById("skill").innerHTML = "방어막 추가!";
+            updateDefenseDisplay();
+            skillUsed = false; // 스킬 사용 종료
+        }
+
+        function updateDefenseDisplay() {
+            document.getElementById("defend").innerHTML = "방어막 수: " + defend;
+        }
+
+        function revealSafeCells() {
+            document.getElementById("skill").innerHTML = "안전한 칸 3개 공개!";
+            let safeCells = [];
+            let rows = grid.rows;
+            for (let i = 0; i < rows.length; i++) {
+                let cells = rows[i].cells;
+                for (let j = 0; j < cells.length; j++) {
+                    if (cells[j].getAttribute("mine") === "false" && cells[j].className !== "clicked") {
+                        safeCells.push(cells[j]);
+                    }
+                }
+            }
+            if (safeCells.length > 0) {
+                for (let i = 0; i < Math.min(3, safeCells.length); i++) {
+                    let index = Math.floor(Math.random() * safeCells.length);
+                    safeCells[index].className = "clicked";
+                    remainingCells--;
+                    safeCells.splice(index, 1);
+                }
+            }
+            setTimeout(function () {
+                document.getElementById("skill").innerHTML = "";
+                skillUsed = false; // 스킬 사용 종료
+                checkForSkillUsage(); // 스킬 사용 후 100 넘는지 확인
+            }, 1000);
+        }
+
+        function checkForSkillUsage() {
+            if (!gameActive && skillUsed) {
+                return; // 게임이 종료되고 스킬이 사용되면 함수 종료
+            }
+            if (parseInt(document.getElementById("addclick").innerHTML) >= 100) {
+                addclick();
+            }
+        }
+
+        function countdownAndExecute(action, callback) {
+            let timeElement = document.getElementById("time");
+            timeElement.innerHTML = "준비...";
+            setTimeout(() => { timeElement.innerHTML = "3"; }, 1000);
+            setTimeout(() => { timeElement.innerHTML = "2"; }, 1500);
+            setTimeout(() => { timeElement.innerHTML = "1"; }, 2000);
+            setTimeout(() => {
+                timeElement.innerHTML = "고!";
+                action();
+            }, 2500);
+           
+            setTimeout(() => {
+                timeElement.innerHTML = "";
+                if (callback) callback();
+            }, 3500);
+        }
+    </script>
+</body>
+
+</html>
